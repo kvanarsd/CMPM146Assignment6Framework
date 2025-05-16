@@ -23,9 +23,27 @@ class TreeNode:
         self.results = []
         self.param = param
     
+    # value and visits from section
+    def value(self):
+        return sum(self.results/len(self.results))
+    
+    def visits(self):
+        return len(self.results)
     # REQUIRED function
     # Called once per iteration
     def step(self, state):
+        # code from section
+        exploredNode = []
+        all_possible_actions = state.get_actions()
+        for action in all_possible_actions:
+            if action in self.children.keys():
+                exploredNode.append(action)
+            else:
+                self.children[action] = nextState
+        if len(exploredNode) == len(all_possible_actions):
+            Select()
+        else:
+            Expand(exploredNode, all_possible_actions)
         self.select(state)
         
     # REQUIRED function
@@ -46,25 +64,57 @@ class TreeNode:
     # Otherwise, pick a child node according to your selection criterion (e.g. UCB-1)
     # apply its action to the state and recursively call select on that child node.
     def select(self, state):
-        pass
+    # code from section
+        values = []
+        visits = []
+        actions = []
+        for child in self.children.keys():
+            actions.append(child)
+            values.append(child.value)
+            visits.append(child.visit)
+        
+        weights = []
+        for i in range(values):
+            weight = values[i] + self.param*math.sqrt(math.log(self.visits())/visits[i])
+            weights.append(weight)
+
+        nextAction = random.choices(actions, weights) [0]
+        state.step(nextAction)
+        self.children[nextAction].expand(state)
+        
 
     # RECOMMENDED: expand takes the available actions, and picks one at random,
     # adds a child node corresponding to that action, applies the action ot the state
     # and then calls rollout on that new node
-    def expand(self, state, available):
-        pass 
+    def expand(self, state, available): 
+        #build a list of unexploredActions
+        toExplore = []
+        for action in all:
+            if action not in explored:
+                toExplore.append(action)
+        nextAction = random.choice(toExplore)
+        expanded_state = state.copy_undeterministic()
+        expanded_state.step(nextAction)
+        self.children[nextAction] = TreeNode(self.param, self)
+        self.children[nextAction].rollout(expanded_state)
+
 
     # RECOMMENDED: rollout plays the game randomly until its conclusion, and then 
     # calls backpropagate with the result you get 
     def rollout(self, state):
-        pass
+        while not state.ended():
+            action = random.choice(state.get_actions())
+            state.step(action)
+        return state.score()
         
     # RECOMMENDED: backpropagate records the score you got in the current node, and 
     # then recursively calls the parent's backpropagate as well.
     # If you record scores in a list, you can use sum(self.results)/len(self.results)
     # to get an average.
     def backpropagate(self, result):
-        pass
+        self.results.append(result)
+        if self.parent is not None:
+            self.parent.backpropagate(result)
         
     # RECOMMENDED: You can start by just using state.score() as the actual value you are 
     # optimizing; for the challenge scenario, in particular, you may want to experiment
