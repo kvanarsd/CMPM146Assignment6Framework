@@ -31,20 +31,26 @@ class TreeNode:
         return len(self.results)
     # REQUIRED function
     # Called once per iteration
+#     selecting nodes until you reach a leaf node
+    # expanding the leaf node
+    # performing a complete rollout
+    # backpropagating the result
     def step(self, state):
-        # code from section
-        exploredNode = []
-        all_possible_actions = state.get_actions()
-        for action in all_possible_actions:
-            if action in self.children.keys():
-                exploredNode.append(action)
-            else:
-                self.children[action] = nextState
-        if len(exploredNode) == len(all_possible_actions):
-            Select()
-        else:
-            Expand(exploredNode, all_possible_actions)
         self.select(state)
+        # code from section
+        # exploredNode = []
+        # all_possible_actions = state.get_actions()
+        # for action in all_possible_actions:
+        #     if action in self.children.keys():
+        #         exploredNode.append(action)
+        #     else:
+        #         self.children[action] = nextState
+        # if len(exploredNode) == len(all_possible_actions):
+        #     self.select()
+        # else:
+        #     self.expand(exploredNode, all_possible_actions)
+        # self.select(state)
+
         
     # REQUIRED function
     # Called after all iterations are done; should return the 
@@ -55,7 +61,15 @@ class TreeNode:
     # REQUIRED function (implementation optional, but *very* helpful for debugging)
     # Called after all iterations when the -v command line parameter is present
     def print_tree(self, indent = 0):
-        pass
+        space = "   " * indent
+        for key, value in self.children.items():
+            #print("THIS IS THE CHILD" + child)
+            average = "?"
+            if (len(value.results) > 0) :
+                average = sum(value.results) / len(value.results)
+
+            print(space + key + " " + average)
+            value.print_tree(indent + 1)
 
 
     # RECOMMENDED: select gets all actions available in the state it is passed
@@ -65,6 +79,17 @@ class TreeNode:
     # apply its action to the state and recursively call select on that child node.
     def select(self, state):
     # code from section
+        unexploredNodes = []
+        all_possible_actions = state.get_actions()
+        for action in all_possible_actions:
+            if action.key() not in self.children:
+                unexploredNodes.append(action)
+        if len(unexploredNodes) > 0:
+            # unexploredNode = state.copy_undeterministic()
+            # unexploredNode.step(action)
+            self.expand(state, unexploredNodes)
+            return
+
         values = []
         visits = []
         actions = []
@@ -79,33 +104,39 @@ class TreeNode:
             weights.append(weight)
 
         nextAction = random.choices(actions, weights) [0]
+        # MAYBE COPY STATE IDK
         state.step(nextAction)
-        self.children[nextAction].expand(state)
+        self.children[nextAction.key()].select(state)
         
 
     # RECOMMENDED: expand takes the available actions, and picks one at random,
     # adds a child node corresponding to that action, applies the action ot the state
     # and then calls rollout on that new node
     def expand(self, state, available): 
+        nextAction = random.choice(available)
+        self.children[nextAction.key()] = TreeNode(self.param, self)
+        state.step(nextAction)
+        self.rollout(state)
         #build a list of unexploredActions
-        toExplore = []
-        for action in all:
-            if action not in explored:
-                toExplore.append(action)
-        nextAction = random.choice(toExplore)
-        expanded_state = state.copy_undeterministic()
-        expanded_state.step(nextAction)
-        self.children[nextAction] = TreeNode(self.param, self)
-        self.children[nextAction].rollout(expanded_state)
+        # toExplore = []
+        # for action in all:
+        #     if action not in explored:
+        #         toExplore.append(action)
+        # nextAction = random.choice(toExplore)
+        # expanded_state = state.copy_undeterministic()
+        # expanded_state.step(nextAction)
+        # self.children[nextAction] = TreeNode(self.param, self)
+        # self.children[nextAction].rollout(expanded_state)
 
 
     # RECOMMENDED: rollout plays the game randomly until its conclusion, and then 
     # calls backpropagate with the result you get 
     def rollout(self, state):
-        while not state.ended():
-            action = random.choice(state.get_actions())
-            state.step(action)
-        return state.score()
+        simState = state.copy_undeterministic()
+        while not simState.ended():
+            action = random.choice(simState.get_actions())
+            simState.step(action)
+        self.backpropagate(simState.score())
         
     # RECOMMENDED: backpropagate records the score you got in the current node, and 
     # then recursively calls the parent's backpropagate as well.
