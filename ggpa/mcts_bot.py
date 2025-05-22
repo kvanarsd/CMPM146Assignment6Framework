@@ -59,19 +59,28 @@ class TreeNode:
     # Called after all iterations are done; should return the 
     # best action from among state.get_actions()
     def get_best(self, state):
-        return random.choice(state.get_actions())
+        best_action = None
+        best_value = float('-inf')
+        for action in state.get_actions():
+            key = action.key()
+            if key in self.children:
+                child = self.children[key]
+                val = child.value()
+                if val > best_value:
+                    best_value = val
+                    best_action = action
+        return best_action or random.choice(state.get_actions())
         
     # REQUIRED function (implementation optional, but *very* helpful for debugging)
     # Called after all iterations when the -v command line parameter is present
     def print_tree(self, indent = 0):
-        space = "   " * indent
+        space = "  " * indent
         for name, child in self.children.items():
-            #print("THIS IS THE CHILD" + child)
-            average = "?"
-            if (len(child.results) > 0) :
-                average = sum(child.results) / len(child.results)
-
-            print(space + name + " " + average)
+            # print("THIS IS THE CHILD ", child.action.key(), "results are ", child.results)
+            average = round(child.value(), 2)
+            if name == "":
+                name = "End Turn"
+            print(space, name, average)
             child.print_tree(indent + 1)
 
 
@@ -128,17 +137,19 @@ class TreeNode:
         else:
             nextAction = random.choice(actions)
         # MAYBE COPY STATE IDK
-        state.step(nextAction)
-        self.children[nextAction.key()].select(state)
+        nextState = state.copy_undeterministic()
+        nextState.step(nextAction)
+        self.children[nextAction.key()].select(nextState)
 
     # RECOMMENDED: expand takes the available actions, and picks one at random,
     # adds a child node corresponding to that action, applies the action ot the state
     # and then calls rollout on that new node
     def expand(self, state, available): 
         nextAction = random.choice(available)
-        self.children[nextAction.key()] = TreeNode(self.param, self, nextAction)
+        child = TreeNode(self.param, self, nextAction)
+        self.children[nextAction.key()] = child
         state.step(nextAction)
-        self.rollout(state)
+        child.rollout(state)
         #build a list of unexploredActions
         # toExplore = []
         # for action in all:
@@ -164,7 +175,7 @@ class TreeNode:
     # then recursively calls the parent's backpropagate as well.
     # If you record scores in a list, you can use sum(self.results)/len(self.results)
     # to get an average.
-    def backpropagate(self, result):
+    def backpropagate(self, result): 
         self.results.append(result)
         if self.parent is not None:
             self.parent.backpropagate(result)
