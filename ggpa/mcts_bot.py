@@ -17,15 +17,18 @@ class TreeNode:
     # You can change this to include other attributes. 
     # param is the value passed via the -p command line option (default: 0.5)
     # You can use this for e.g. the "c" value in the UCB-1 formula
-    def __init__(self, param, parent=None):
+    def __init__(self, param, parent=None, action=None):
         self.children = {}
         self.parent = parent
         self.results = []
         self.param = param
+        self.action = action
     
     # value and visits from section
     def value(self):
-        return sum(self.results/len(self.results))
+        if len(self.results) == 0:
+            return 0
+        return sum(self.results)/len(self.results)
     
     def visits(self):
         return len(self.results)
@@ -62,14 +65,14 @@ class TreeNode:
     # Called after all iterations when the -v command line parameter is present
     def print_tree(self, indent = 0):
         space = "   " * indent
-        for key, value in self.children.items():
+        for name, child in self.children.items():
             #print("THIS IS THE CHILD" + child)
             average = "?"
-            if (len(value.results) > 0) :
-                average = sum(value.results) / len(value.results)
+            if (len(child.results) > 0) :
+                average = sum(child.results) / len(child.results)
 
-            print(space + key + " " + average)
-            value.print_tree(indent + 1)
+            print(space + name + " " + average)
+            child.print_tree(indent + 1)
 
 
     # RECOMMENDED: select gets all actions available in the state it is passed
@@ -79,9 +82,22 @@ class TreeNode:
     # apply its action to the state and recursively call select on that child node.
     def select(self, state):
     # code from section
+        # if self.parent != None:
+        #     # print("calling select on " + self.action.key())
+        #     if self.action.key() == "":
+        #         print("end turn")
+        #         return
         unexploredNodes = []
         all_possible_actions = state.get_actions()
+        if len(all_possible_actions) == 0:
+            # print("No possible children")
+            return
+        # print("Here are our current children ")
+        # print(self.children.keys())
+        curActions = []
         for action in all_possible_actions:
+            curActions.append(action.key())
+            # print("From Select this is our hand " + action.key())
             if action.key() not in self.children:
                 unexploredNodes.append(action)
         if len(unexploredNodes) > 0:
@@ -93,28 +109,34 @@ class TreeNode:
         values = []
         visits = []
         actions = []
-        for child in self.children.keys():
-            actions.append(child)
-            values.append(child.value)
-            visits.append(child.visit)
+        for name, child in self.children.items():
+            if name in curActions:
+                # print("Here are our possible actions " + child.action.key())
+                actions.append(child.action)
+                values.append(child.value())
+                visits.append(child.visits())
         
         weights = []
-        for i in range(values):
-            weight = values[i] + self.param*math.sqrt(math.log(self.visits())/visits[i])
+        for i in range(len(values)):
+            weight = 0
+            if visits[i] > 0:
+                weight = values[i] + self.param*math.sqrt(math.log(self.visits())/visits[i])
             weights.append(weight)
 
-        nextAction = random.choices(actions, weights) [0]
+        if sum(weights) > 0:
+            nextAction = random.choices(actions, weights) [0]
+        else:
+            nextAction = random.choice(actions)
         # MAYBE COPY STATE IDK
         state.step(nextAction)
         self.children[nextAction.key()].select(state)
-        
 
     # RECOMMENDED: expand takes the available actions, and picks one at random,
     # adds a child node corresponding to that action, applies the action ot the state
     # and then calls rollout on that new node
     def expand(self, state, available): 
         nextAction = random.choice(available)
-        self.children[nextAction.key()] = TreeNode(self.param, self)
+        self.children[nextAction.key()] = TreeNode(self.param, self, nextAction)
         state.step(nextAction)
         self.rollout(state)
         #build a list of unexploredActions
