@@ -98,14 +98,14 @@ class TreeNode:
         #         return
         unexploredNodes = []
         all_possible_actions = state.get_actions()
-        if len(all_possible_actions) == 0:
+        if len(all_possible_actions) == 0: # TODO if we select one and it's an end node, we don't backpropagate
             # print("No possible children")
             return
         # print("Here are our current children ")
         # print(self.children.keys())
         curActions = []
         for action in all_possible_actions:
-            curActions.append(action.key())
+            curActions.append(action.key()) # TODO every item in children will be in curActions.
             # print("From Select this is our hand " + action.key())
             if action.key() not in self.children:
                 unexploredNodes.append(action)
@@ -119,7 +119,7 @@ class TreeNode:
         visits = []
         actions = []
         for name, child in self.children.items():
-            if name in curActions:
+            if name in curActions: # TODO that makes this line always return true
                 # print("Here are our possible actions " + child.action.key())
                 actions.append(child.action)
                 values.append(child.value())
@@ -167,8 +167,12 @@ class TreeNode:
     def rollout(self, state):
         simState = state.copy_undeterministic()
         while not simState.ended():
-            action = random.choice(simState.get_actions())
-            simState.step(action)
+            allActions = simState.get_actions()
+            cardActions = [cardAction for cardAction in allActions if isinstance(cardAction, PlayCard)]
+            if cardActions:
+                simState.step(random.choice(cardActions))
+            else:
+                simState.step(random.choice(allActions))
         self.backpropagate(simState.score())
         
     # RECOMMENDED: backpropagate records the score you got in the current node, and 
